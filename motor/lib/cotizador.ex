@@ -38,11 +38,11 @@ defmodule Cotizador do
   end
 
   # 7-Excepcion al peso Maximo
-  # Si es sobredimensionada y llegó hasta aquí (ya validó su permiso), pasa la prueba.
+
   defp validar(%{tipo: :sobredimensionada}, _reglas), do: :ok
 
   # 8 Excede peso maximo (general, refrigerada y peligrosa)
-  
+
   defp validar(%{peso_kg: p}, reglas) when p > reglas.peso_maximo_kg do
     {:error, :excede_peso_maximo}
   end
@@ -50,5 +50,41 @@ defmodule Cotizador do
   #  Si paso  el embarque es válido
   defp validar(_embarque, _reglas), do: :ok
 
-  defp calcular(_embarque, _reglas), do: %{}
-end
+ 
+
+  defp calcular(embarque, reglas) do
+    flete_bruto = embarque.distancia_km * reglas.tarifa_km
+    monto_descuento = calcular_descuento(embarque.peso_kg, reglas.descuento, flete_bruto)
+    flete = flete_bruto - monto_descuento
+    cuota_puente = Map.fetch!(reglas.cuota_puente, embarque.puente)
+
+    %{
+      flete_bruto: flete_bruto,
+      descuento: monto_descuento,
+      flete: flete,
+      cuota_puente: cuota_puente,
+      # Valores temporales para que las pruebas de la etapa 2 pasen sin tronar en la etapa 3
+      recargo: 0,
+      ajuste_minimo: 0,
+      total: flete + cuota_puente
+    }
+  end
+
+  
+  defp calcular_descuento(peso, %{criterio: :a_partir_de, umbral_kg: u, pct: p}, flete_bruto)
+       when peso >= u do
+    pct(flete_bruto, p)
+  end
+
+ 
+ 
+  defp calcular_descuento(peso, %{criterio: :mas_de, umbral_kg: u, pct: p}, flete_bruto)
+       when peso > u do
+    pct(flete_bruto, p)
+  end
+
+  # Si no cumple  el descuento es 0
+  defp calcular_descuento(_peso, _descuento_reglas, _flete_bruto), do: 0
+
+  # Función redondeada al centavo, mitades hacia arriba
+  defp pct(monto, p), do: div(monto * p + 50, 100)
