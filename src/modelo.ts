@@ -125,3 +125,12 @@ export function cotizar(b: Borrador, r: Reglas): Resultado<Cotizado, Rechazado> 
     cotizacion,
   };
 }
+
+export function despachar(c: Cotizado, folio: string): Despachado {
+  return {
+    estado: 'despachado',
+    embarque: c.embarque,
+    cotizacion: c.cotizacion,
+    folio,
+  };
+}
