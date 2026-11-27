@@ -25,5 +25,30 @@ rechazo(embarque(_, Peso, _, Tipo, _, _, _), excede_peso_maximo) :-
     peso_maximo(Max),
     Peso > Max.
 
-% calcular(+Embarque, -Cotizacion): temporal en ceros para Etapa 1
-calcular(_, cotizacion(0, 0, 0, 0, 0, 0, 0)).
+% pct(+Monto, +Porcentaje, -Resultado): redondeo entero
+pct(Monto, P, R) :-
+    R is (Monto * P + 50) // 100.
+
+% aplica_descuento(+Peso): segun criterio de variante.pl
+aplica_descuento(Peso) :-
+    descuento(Umbral, _, a_partir_de),
+    Peso >= Umbral.
+aplica_descuento(Peso) :-
+    descuento(Umbral, _, mas_de),
+    Peso > Umbral.
+
+% monto_descuento(+Peso, +Bruto, -Desc): corte para evitar segunda respuesta
+monto_descuento(Peso, Bruto, D) :-
+    aplica_descuento(Peso), !,
+    descuento(_, P, _),
+    pct(Bruto, P, D).
+monto_descuento(_, _, 0).
+
+% calcular(+Embarque, -Cotizacion): etapa 2 (recargo y ajuste minimo en 0)
+calcular(embarque(_, Peso, Dist, _, Puente, _, _), cotizacion(Bruto, Desc, Flete, Cuota, 0, 0, Total)) :-
+    tarifa_km(Tarifa),
+    Bruto is Dist * Tarifa,
+    monto_descuento(Peso, Bruto, Desc),
+    Flete is Bruto - Desc,
+    cuota_puente(Puente, Cuota),
+    Total is Flete + Cuota.
